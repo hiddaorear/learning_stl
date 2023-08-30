@@ -82,6 +82,7 @@ value_type(const _Iter& __i) { return __value_type(__i); }
 // 数据结构
 
 // heap
+
 // heap push 函数
 template <class RandomAccessIterator, class Distance, class T>
 inline void __push_heap(RandomAccessIterator first, Distance holdIndex,
@@ -107,7 +108,7 @@ inline void __push_heap_aux(RandomAccessIterator first,
 }
 
 template <class RandomAccessIterator>
-inline void push_heap(RandomAccessIterator first,
+inline void my_push_heap(RandomAccessIterator first,
                       RandomAccessIterator last) {
     // 注意，此函数调用时，新元素应已置于底部容器的最尾端
     __push_heap_aux(first, last, distance_type(first), value_type(first));
@@ -117,7 +118,27 @@ inline void push_heap(RandomAccessIterator first,
 template <class RandomAccessIterator, class Distance, class T>
 inline void __adjust_heap(RandomAccessIterator first, Distance holdIndex,
                           Distance len, T value) {
-
+    Distance topIndex = holdIndex;
+    Distance secondChild = 2 * holdIndex + 2; // 洞节点之右子节点
+    while (secondChild < len) {
+        if (*(first + secondChild) < *(first + (secondChild - 1))) {
+            // 比较洞节点之左右两个子值，然后以 secondChild 代表较大子节点
+            secondChild--;
+        }
+        // Percolate down：令较大子值为洞值，再令洞号下移至较大子节点处
+        *(first + holdIndex) = *(first + secondChild);
+        holdIndex = secondChild;
+        // 找出新洞节点的右子节点
+        secondChild = 2 * (secondChild + 1);
+    }
+    if (secondChild == len) { // 没有右子节点，只有左子节点
+        // Percolate down：令左子值为洞值，再令洞号下移至左子节点处
+        *(first + holdIndex) = *(first + (secondChild - 1));
+        holdIndex = secondChild - 1;
+    }
+    // 将欲调整值填入目前洞号里。注意，此时肯定满足次序特性
+    // 侯捷说：下面这一句，可以改成： *(first + holdIndex) = value;
+    __push_heap(first, holdIndex, topIndex, value);
 }
 
 template <class RandomAccessIterator, class T, class Distance>
@@ -132,18 +153,50 @@ inline void __pop_heap(RandomAccessIterator first,
 }
 
 template <class RandomAccessIterator, class T>
-inline void __pop_head_aux(RandomAccessIterator first,
+inline void __pop_heap_aux(RandomAccessIterator first,
                            RandomAccessIterator last, T*) {
     // 跟进 implicit representation heap 的次序，pop操作的结果
     // 应为容器底部的第一个元素。因此，首先设定欲调整值为尾值，然后将首值调至尾节点（所以以上迭代器result设为 last - 1）【更详细理解，见文章】
     // 然后重整 [first, last -1)，使之重新成为一个合格的 heap
-    __pop_head(first, last - 1, last - 1, T(*(last - 1)), distance_type(first));
+    __pop_heap(first, last - 1, last - 1, T(*(last - 1)), distance_type(first));
 }
 
 template <class RandomAccessIterator>
-inline void pop_heap(RandomAccessIterator first,
-                      RandomAccessIterator last) {
+inline void my_pop_heap(RandomAccessIterator first,
+                     RandomAccessIterator last) {
     __pop_heap_aux(first, last, value_type(first));
+}
+
+// sort heap 堆排序
+template <class RandomAccessIterator>
+void my_sort_heap(RandomAccessIterator first,
+               RandomAccessIterator last) {
+    // 每次执行 pop_heap，极值就被放在尾端。扣除尾端，再执行pop_heap，次极值又被放到尾端。依此，可得排序结果
+    while (last - first > 1) {
+        pop_heap(first, last--); // 每操作一次，pop_heap()一次，操作范围退缩一格【直接修改的原来的 array，不需要新增一个array】
+    }
+}
+
+// make heap
+template <class RandomAccessIterator, class T, class Distance>
+void __make_heap(RandomAccessIterator first,
+                 RandomAccessIterator last, T*, Distance*) {
+    if (last - first < 2) return; // 长度为 0 或 1， 不必重新排列
+    Distance len = last - first;
+    // 找出第一个需要重排的子树头部，以 parent 标示出，由于任何叶子节点都不需执行 Percolate down，所以有以下计算
+    Distance holeIndex = (len - 2) / 2;
+    while (true) {
+        // 重排以 holdIndex 为首的子树。len 是为了让__adjust_heap 判断操作范围
+        __adjust_heap(first, holeIndex, len, T(*(first + holeIndex)));
+        if (holeIndex == 0) return; // 走完根节点，就结束
+        holeIndex--; // 即将重排之子树，头部向前一个节点
+    }
+}
+
+template <class RandomAccessIterator>
+inline void my_make_heap(RandomAccessIterator first,
+                      RandomAccessIterator last) {
+    __make_heap(first, last, value_type(first), distance_type(first));
 }
 
 
