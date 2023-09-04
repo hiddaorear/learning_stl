@@ -1,8 +1,3 @@
-//
-// Created by 汪怡峰 on 2023/8/24.
-//
-
-
 namespace SGI {
 
 #ifndef LEARNING_STL_STL_ALGO_H

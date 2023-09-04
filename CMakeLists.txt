@@ -3,4 +3,4 @@ project(learning_stl)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(learning_stl main.cpp stl_algo.h)
+add_executable(learning_stl main.cpp stl_algo.h list.h)
