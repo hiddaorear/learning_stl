@@ -37,7 +37,7 @@ int main() {
     std::vector<int> marge_sort_vector(arr, arr + 9);
     SGI::mergesort(marge_sort_vector.begin(), marge_sort_vector.end());
     for (int i = 0; i < marge_sort_vector.size(); ++i) {
-        std::cout << marge_sort_arr[i] << ' ';
+        std::cout << marge_sort_vector[i] << ' ';
     }
     std::cout << std::endl; //
 

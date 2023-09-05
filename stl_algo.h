@@ -1,233 +1,10 @@
+#include "stl_iterator_base.h"
+#include "stl_tempbuf.h"
+
 namespace SGI {
 
 #ifndef LEARNING_STL_STL_ALGO_H
 #define LEARNING_STL_STL_ALGO_H
-
-    struct __true_type {
-    };
-
-    struct __false_type {
-    };
-
-    template <class _Tp>
-    struct __type_traits {
-        typedef __true_type     this_dummy_member_must_be_first;
-        /* Do not remove this member. It informs a compiler which
-           automatically specializes __type_traits that this
-           __type_traits template is special. It just makes sure that
-           things work if an implementation is using a template
-           called __type_traits for something unrelated. */
-
-        /* The following restrictions should be observed for the sake of
-           compilers which automatically produce type specific specializations
-           of this class:
-               - You may reorder the members below if you wish
-               - You may remove any of the members below if you wish
-               - You must not rename members without making the corresponding
-                 name change in the compiler
-               - Members you add will be treated like regular members unless
-                 you add the appropriate support in the compiler. */
-
-
-        typedef __false_type    has_trivial_default_constructor;
-        typedef __false_type    has_trivial_copy_constructor;
-        typedef __false_type    has_trivial_assignment_operator;
-        typedef __false_type    has_trivial_destructor;
-        typedef __false_type    is_POD_type;
-    };
-
-# ifdef __STL_USE_EXCEPTIONS
-    #   define __STL_TRY try
-#   define __STL_CATCH_ALL catch(...)
-#   define __STL_THROW(x) throw x
-#   define __STL_RETHROW throw
-#   define __STL_NOTHROW throw()
-#   define __STL_UNWIND(action) catch(...) { action; throw; }
-# else
-#   define __STL_TRY
-#   define __STL_CATCH_ALL if (false)
-#   define __STL_THROW(x)
-#   define __STL_RETHROW
-#   define __STL_NOTHROW
-#   define __STL_UNWIND(action)
-# endif
-
-    // value_type实现
-    struct input_iterator_tag {
-    };
-    struct output_iterator_tag {
-    };
-    struct forward_iterator_tag : public input_iterator_tag {
-    };
-    struct bidirectional_iterator_tag : public forward_iterator_tag {
-    };
-    struct random_access_iterator_tag : public bidirectional_iterator_tag {
-    };
-
-    template<class _Iterator>
-    struct iterator_traits {
-        typedef typename _Iterator::iterator_category iterator_category;
-        typedef typename _Iterator::value_type value_type;
-        typedef typename _Iterator::difference_type difference_type;
-        typedef typename _Iterator::pointer pointer;
-        typedef typename _Iterator::reference reference;
-    };
-
-    template<class _Tp>
-    struct iterator_traits<_Tp *> {
-        typedef random_access_iterator_tag iterator_category;
-        typedef _Tp value_type;
-        typedef ptrdiff_t difference_type;
-        typedef _Tp *pointer;
-        typedef _Tp &reference;
-    };
-
-    template<class _Tp>
-    struct iterator_traits<const _Tp *> {
-        typedef random_access_iterator_tag iterator_category;
-        typedef _Tp value_type;
-        typedef ptrdiff_t difference_type;
-        typedef const _Tp *pointer;
-        typedef const _Tp &reference;
-    };
-
-
-    template<class _Iter>
-    inline typename iterator_traits<_Iter>::iterator_category
-    __iterator_category(const _Iter &) {
-        typedef typename iterator_traits<_Iter>::iterator_category _Category;
-        return _Category();
-    }
-
-    template<class _Iter>
-    inline typename iterator_traits<_Iter>::difference_type *
-    __distance_type(const _Iter &) {
-        return static_cast<typename iterator_traits<_Iter>::difference_type *>(0);
-    }
-
-    template<class _Iter>
-    inline typename iterator_traits<_Iter>::value_type *
-    __value_type(const _Iter &) {
-        return static_cast<typename iterator_traits<_Iter>::value_type *>(0);
-    }
-
-    template<class _Iter>
-    inline typename iterator_traits<_Iter>::iterator_category
-    iterator_category(const _Iter &__i) { return __iterator_category(__i); }
-
-
-    template<class _Iter>
-    inline typename iterator_traits<_Iter>::difference_type *
-    distance_type(const _Iter &__i) { return __distance_type(__i); }
-
-
-    template<class _Iter>
-    inline typename iterator_traits<_Iter>::value_type *
-    value_type(const _Iter &__i) { return __value_type(__i); }
-
-#define __VALUE_TYPE(__i)        __value_type(__i)
-
-// get_temporary_buffer
-
-    template <class Tp>
-    std::pair<Tp*, ptrdiff_t>
-    get_temporary_buffer(ptrdiff_t len, Tp*) {
-        if (len > ptrdiff_t(INT_MAX / sizeof(Tp)))
-            len = INT_MAX / sizeof(Tp);
-
-        while (len > 0) {
-            Tp* tmp = (Tp*) malloc((size_t)len * sizeof(Tp));
-            if (tmp != 0)
-                return pair<Tp*, ptrdiff_t>(tmp, len);
-            len /= 2;
-        }
-
-        return pair<Tp*, ptrdiff_t>((Tp*)0, 0);
-    }
-
-
-    template <class _Tp>
-    void return_temporary_buffer(_Tp* __p) {
-        free(__p);
-    }
-
-    template <class _ForwardIterator, class _Tp>
-    class _Temporary_buffer {
-    private:
-        ptrdiff_t  _M_original_len;
-        ptrdiff_t  _M_len;
-        _Tp*       _M_buffer;
-
-        void _M_allocate_buffer() {
-            _M_original_len = _M_len;
-            _M_buffer = 0;
-
-            if (_M_len > (ptrdiff_t)(INT_MAX / sizeof(_Tp)))
-                _M_len = INT_MAX / sizeof(_Tp);
-
-            while (_M_len > 0) {
-                _M_buffer = (_Tp*) malloc(_M_len * sizeof(_Tp));
-                if (_M_buffer)
-                    break;
-                _M_len /= 2;
-            }
-        }
-
-        void _M_initialize_buffer(const _Tp&, __true_type) {}
-        void _M_initialize_buffer(const _Tp& val, __false_type) {
-            uninitialized_fill_n(_M_buffer, _M_len, val);
-        }
-
-    public:
-        ptrdiff_t size() const { return _M_len; }
-        ptrdiff_t requested_size() const { return _M_original_len; }
-        _Tp* begin() { return _M_buffer; }
-        _Tp* end() { return _M_buffer + _M_len; }
-
-        _Temporary_buffer(_ForwardIterator __first, _ForwardIterator __last) {
-            // Workaround for a __type_traits bug in the pre-7.3 compiler.
-#   if defined(__sgi) && !defined(__GNUC__) && _COMPILER_VERSION < 730
-            typedef typename __type_traits<_Tp>::is_POD_type _Trivial;
-#   else
-            typedef typename __type_traits<_Tp>::has_trivial_default_constructor
-                    _Trivial;
-#   endif
-
-            __STL_TRY {
-                    _M_len = 0;
-                    distance(__first, __last, _M_len);
-                    _M_allocate_buffer();
-                    if (_M_len > 0)
-                    _M_initialize_buffer(*__first, _Trivial());
-            }
-            __STL_UNWIND(free(_M_buffer); _M_buffer = 0; _M_len = 0);
-        }
-
-        ~_Temporary_buffer() {
-            destroy(_M_buffer, _M_buffer + _M_len);
-            free(_M_buffer);
-        }
-
-    private:
-        // Disable copy constructor and assignment operator.
-        _Temporary_buffer(const _Temporary_buffer&) {}
-        void operator=(const _Temporary_buffer&) {}
-    };
-
-// Class temporary_buffer is not part of the standard.  It is an extension.
-
-    template <class _ForwardIterator,
-            class _Tp
-#ifdef __STL_CLASS_PARTIAL_SPECIALIZATION
-            = typename iterator_traits<_ForwardIterator>::value_type
-#endif /* __STL_CLASS_PARTIAL_SPECIALIZATION */
-    >
-    struct temporary_buffer : public _Temporary_buffer<_ForwardIterator, _Tp>
-    {
-        temporary_buffer(_ForwardIterator __first, _ForwardIterator __last)
-                : _Temporary_buffer<_ForwardIterator, _Tp>(__first, __last) {}
-        ~temporary_buffer() {}
-    };
 
 
 // ----------------------------------------------------------------------------
@@ -536,10 +313,10 @@ namespace SGI {
                           Pointer buffer, Distance buffer_size) {
         if (len1 <= len2 && len1 <= buffer_size) { // case1. 缓冲区足够安置序列1
             Pointer end_buffer = std::copy(first, middle, buffer);
-            merge(buffer, end_buffer, middle, last, first);
+            SGI::merge(buffer, end_buffer, middle, last, first);
         } else { // case2. 缓冲区足够安置序列2
             Pointer end_buffer = std::copy(first, middle, buffer);
-            merge_backward(first, middle, buffer, end_buffer, last);
+            SGI::merge_backward(first, middle, buffer, end_buffer, last);
         }
         // TODO case3. 缓冲区不足安置任何一个序列
     }
@@ -550,10 +327,8 @@ namespace SGI {
                                     BidirectionalIterator middle,
                                     BidirectionalIterator last,
                                     T *, Distance *) {
-        Distance len1 = 0;
-        distance(first, middle, len1); // len1 表示序列一的长度
-        Distance len2 = 0;
-        distance(middle, last, len2); // len2 表示序列二的长度
+        Distance len1 = SGI::distance(first, middle); // len1 表示序列一的长度
+        Distance len2 = SGI::distance(middle, last); // len2 表示序列二的长度
 
         // 暂存缓冲区
         temporary_buffer<BidirectionalIterator, T> buf(first, last);
@@ -576,7 +351,8 @@ namespace SGI {
     // 归并排序（merge sort）
     template<class BidirectionalIterator>
     void mergesort(BidirectionalIterator first, BidirectionalIterator last) {
-        typename iterator_traits<BidirectionalIterator>::difference_type n = distance(first, last);
+        typename iterator_traits<BidirectionalIterator>::difference_type n = 0;
+        n = SGI::distance(first, last);
         if (n == 0 || n == 1) {
             return;
         } else {
